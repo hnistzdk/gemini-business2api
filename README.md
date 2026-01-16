@@ -123,8 +123,42 @@ docker run -d -p 7860:7860 \
 
 **后端部署到 HuggingFace Spaces：**
 
-1. 创建 Docker 类型的 Space
-2. **重要**：在 README.md 的 YAML 配置中添加 `app_port: 7860`：
+1. 在 [HuggingFace Spaces](https://huggingface.co/spaces) 创建新 Space，SDK 选择 **Docker**
+
+2. **上传代码**（二选一）：
+
+   **方式 A：Git 推送（推荐）**
+   ```bash
+   # 克隆你的 HF Space 仓库
+   git clone https://huggingface.co/spaces/你的用户名/你的space名
+   cd 你的space名
+
+   # 复制本项目必要文件到 Space 目录
+   # 必需文件/目录：
+   #   core/          - 核心业务逻辑
+   #   util/          - 工具函数
+   #   Dockerfile     - 容器构建配置
+   #   main.py        - 应用入口
+   #   requirements.txt - Python 依赖
+
+   # 推送到 HuggingFace
+   git add .
+   git commit -m "Initial deployment"
+   git push
+   ```
+
+   **方式 B：网页上传**
+
+   在 Space 的 **Files** 页面点击 **Add file → Upload files**，上传以下文件：
+   | 文件/目录 | 说明 |
+   |----------|------|
+   | `core/` | 核心业务逻辑（整个目录） |
+   | `util/` | 工具函数（整个目录） |
+   | `Dockerfile` | Docker 构建配置 |
+   | `main.py` | FastAPI 应用入口 |
+   | `requirements.txt` | Python 依赖清单 |
+
+3. **配置 Space 元数据**：在 README.md 顶部添加 YAML 配置：
    ```yaml
    ---
    title: Your App Name
@@ -136,8 +170,17 @@ docker run -d -p 7860:7860 \
    pinned: false
    ---
    ```
-3. 将 Space 设置为 **Public**（私有 Space 外部无法访问）
-4. 设置环境变量：`ADMIN_KEY`、`DATABASE_URL`（可选）
+   > ⚠️ `app_port: 7860` 必须配置，否则所有请求返回 404
+
+4. **配置环境变量**：进入 Space 的 **Settings → Variables and secrets**
+   | 变量名 | 类型 | 必填 | 说明 |
+   |--------|------|------|------|
+   | `ADMIN_KEY` | Secret | ✅ | 管理面板登录密钥 |
+   | `DATABASE_URL` | Secret | 推荐 | PostgreSQL 连接串（见下方获取方式） |
+   | `API_KEY` | Secret | 可选 | API 接口鉴权密钥 |
+   | `PROXY` | Variable | 可选 | HTTP 代理地址 |
+
+5. 将 Space 设置为 **Public**（私有 Space 外部无法访问）
 
 **前端部署到 Vercel：**
 
@@ -189,22 +232,52 @@ update.bat
 
 ### 数据库持久化（可选）
 
-- HF Spaces 环境建议开启，否则重启会丢数据
-- 取消 `requirements.txt` 中 `asyncpg` 的注释并安装依赖
-- 设置 `DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require`
-  - 本地：写入 `.env`
-  - HF Spaces：Settings -> Variables/Secrets
-- 启用后账户/设置/统计写入数据库（HF Spaces 重启不丢）
-- 注意：连接串包含密码，请勿公开
+> ⚠️ **HF Spaces 强烈建议开启**：免费 Space 重启后本地文件会丢失，数据库可确保配置持久化
 
-```
-#  Neon 获取 DATABASE_URL（推荐）
-1. 打开 https://neon.tech 并登录
-2. Create project -> 选择区域
-3. 进入项目页，找到 Connection string 并复制
-4. 形如：
-   postgresql://user:password@ep-xxx.neon.tech/dbname?sslmode=require
-```
+**启用步骤：**
+1. 取消 `requirements.txt` 中 `asyncpg` 的注释
+2. 安装依赖：`pip install asyncpg`
+3. 配置 `DATABASE_URL` 环境变量（获取方式见下方）
+   - 本地开发：写入 `.env` 文件
+   - HF Spaces：Settings → Variables and secrets（类型选 Secret）
+
+**免费 PostgreSQL 数据库获取：**
+
+<details>
+<summary><b>方式 A：Neon（推荐，免费额度充足）</b></summary>
+
+1. 访问 [neon.tech](https://neon.tech) 并注册/登录
+2. 点击 **Create project**，输入项目名称，选择就近区域（如 Singapore）
+3. 创建完成后，在 Dashboard 找到 **Connection string**
+4. 点击复制，格式如下：
+   ```
+   postgresql://username:password@ep-xxx-xxx.ap-southeast-1.aws.neon.tech/dbname?sslmode=require
+   ```
+5. 将此连接串设置为 `DATABASE_URL` 环境变量
+
+> 💡 Neon 免费版提供 0.5GB 存储 + 190 小时/月计算时间，个人使用完全够用
+
+</details>
+
+<details>
+<summary><b>方式 B：Supabase（备选）</b></summary>
+
+1. 访问 [supabase.com](https://supabase.com) 并注册/登录
+2. 点击 **New project**，填写项目信息，设置数据库密码（务必记住）
+3. 等待项目初始化完成（约 2 分钟）
+4. 进入 **Project Settings → Database**
+5. 在 **Connection string** 区域选择 **URI**，复制连接串
+6. 将 `[YOUR-PASSWORD]` 替换为你设置的数据库密码：
+   ```
+   postgresql://postgres.xxx:你的密码@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+   ```
+7. 将此连接串设置为 `DATABASE_URL` 环境变量
+
+> 💡 Supabase 免费版提供 500MB 存储 + 2 个项目
+
+</details>
+
+> 🔒 **安全提示**：连接串包含数据库密码，请勿公开或提交到代码仓库
 
 ### 访问方式
 
