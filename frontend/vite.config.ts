@@ -11,8 +11,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, '../static'),
-    emptyOutDir: false,
+    outDir: process.env.VERCEL ? 'dist' : path.resolve(__dirname, '../static'),
+    emptyOutDir: true,
   },
   server: {
     port: 5173,
