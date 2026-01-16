@@ -149,6 +149,19 @@ docker run -d -p 7860:7860 \
 | 所有请求返回 404 | HF Space 是私有的 | 设置为 Public |
 | POST 请求返回 405 | Vercel rewrites 不支持 POST | 使用 Serverless Function 代理 |
 
+**HF Space 保活（防止休眠）：**
+
+免费的 HF Space 会在 48 小时无活动后自动休眠。可使用 [UptimeRobot](https://uptimerobot.com/) 免费保活：
+
+1. 注册 UptimeRobot 账号
+2. 添加新监控：
+   - Monitor Type: `HTTP(s)`
+   - URL: `https://你的用户名-你的space名.hf.space/`
+   - Monitoring Interval: `24 hours`（每天一次，足够防止休眠）
+3. 保存即可
+
+> 注意：免费版 UptimeRobot 最短间隔为 5 分钟，但对于防止 HF Space 休眠，每天一次已足够。
+
 ### 更新
 
 **Linux/macOS:**
