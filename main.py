@@ -39,7 +39,7 @@ os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # 导入认证模块
 from core.auth import verify_api_key
-from core.session_auth import is_logged_in, login_user, logout_user, require_login, generate_session_secret
+from core.session_auth import is_logged_in, login_user, logout_user, require_login, generate_session_secret, create_auth_token, revoke_token, get_token_from_request
 
 # 导入核心模块
 from core.message import (
@@ -772,11 +772,14 @@ def create_chunk(id: str, created: int, model: str, delta: dict, finish_reason: 
 
 @app.post("/login")
 async def admin_login_post(request: Request, admin_key: str = Form(...)):
-    """Admin login (API)"""
+    """Admin login (API) - 返回 Token 用于跨域认证"""
     if admin_key == ADMIN_KEY:
+        # 同时支持 Session 和 Token
         login_user(request)
+        # 生成 Token 用于跨域场景
+        token = create_auth_token()
         logger.info("[AUTH] Admin login success")
-        return {"success": True}
+        return {"success": True, "token": token}
     logger.warning("[AUTH] Login failed - invalid key")
     raise HTTPException(401, "Invalid key")
 

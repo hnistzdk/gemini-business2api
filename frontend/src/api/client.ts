@@ -1,16 +1,37 @@
 ﻿import axios, { type AxiosInstance, type AxiosError } from 'axios'
 
+const TOKEN_KEY = 'auth_token'
+
+// 获取存储的 Token
+export function getAuthToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+// 设置 Token
+export function setAuthToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+// 清除 Token
+export function clearAuthToken(): void {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
 // 创建 axios 实例
 export const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 30000,
-  withCredentials: true, // 支持 cookie 认证
+  withCredentials: true, // 同源部署时仍支持 cookie 认证
 })
 
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    // 可以在这里添加 token 等认证信息
+    // 添加 Token 到请求头（跨域认证）
+    const token = getAuthToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   (error) => {
@@ -26,6 +47,7 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     // 统一错误处理
     if (error.response?.status === 401) {
+      clearAuthToken()
       window.location.hash = '#/login'
     }
 
