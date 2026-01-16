@@ -114,7 +114,12 @@ docker run -d -p 7860:7860 \
 
 ### 方式四：前后端分离部署（Vercel + HuggingFace Spaces）
 
-适用于需要将前端和后端分开部署的场景。
+> **适用场景**：HuggingFace Spaces 免费版不支持自定义域名，且 `*.hf.space` 域名在部分地区需要特殊网络环境才能访问。如果你拥有托管在 Cloudflare、Vercel 等平台的自定义域名，可以采用此方案：将前端部署到 Vercel 并绑定自定义域名，通过 Vercel Serverless Function 反向代理 HF Space 后端 API。这样用户只需访问你的自定义域名，无需任何特殊网络配置即可使用全部功能。
+
+**架构说明**：
+```
+用户 → Vercel (你的域名) → Serverless Function → HuggingFace Space (后端API)
+```
 
 **后端部署到 HuggingFace Spaces：**
 
@@ -140,6 +145,7 @@ docker run -d -p 7860:7860 \
 2. Vercel 会自动识别 `api/[...path].js` 作为 Serverless Function
 3. 修改 `api/[...path].js` 中的 `BACKEND_URL` 为你的 HF Space 地址
 4. 或在 Vercel 项目设置中添加环境变量 `BACKEND_URL`
+5. （可选）在 Vercel 项目设置中绑定自定义域名
 
 **常见问题：**
 
