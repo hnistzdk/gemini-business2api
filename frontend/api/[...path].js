@@ -7,7 +7,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'https://zaiolos-gemini2api-backe
 
 export const config = {
   api: {
-    bodyParser: false, // 禁用默认解析，保留原始 body
+    bodyParser: false,
   },
 };
 
@@ -23,40 +23,52 @@ export default async function handler(req, res) {
   const { path } = req.query;
   const targetPath = Array.isArray(path) ? path.join('/') : path || '';
 
-  // 构建目标 URL（去掉 query 中的 path 参数）
+  // 构建 query string（排除 path 参数）
   const url = new URL(req.url, `http://${req.headers.host}`);
   url.searchParams.delete('path');
   const queryString = url.search;
   const targetUrl = `${BACKEND_URL}/${targetPath}${queryString}`;
 
+  console.log(`[Proxy] ${req.method} ${targetUrl}`);
+
   try {
-    // 构建请求头
-    const headers = {};
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (!['host', 'content-length', 'connection'].includes(key.toLowerCase())) {
-        headers[key] = value;
-      }
+    // 只保留必要的请求头
+    const headers = {
+      'Content-Type': req.headers['content-type'] || 'application/json',
+      'Accept': req.headers['accept'] || '*/*',
+      'User-Agent': req.headers['user-agent'] || 'Vercel-Proxy',
+    };
+
+    // 保留 Authorization 头
+    if (req.headers['authorization']) {
+      headers['Authorization'] = req.headers['authorization'];
     }
-    headers['host'] = new URL(BACKEND_URL).host;
 
     // 获取原始 body
     let body = undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await getRawBody(req);
+      if (body.length > 0) {
+        headers['Content-Length'] = body.length.toString();
+      }
     }
 
     // 转发请求
     const response = await fetch(targetUrl, {
       method: req.method,
       headers,
-      body,
+      body: body && body.length > 0 ? body : undefined,
     });
 
-    // 设置响应状态和头
+    console.log(`[Proxy] Response: ${response.status}`);
+
+    // 设置响应状态
     res.status(response.status);
 
+    // 复制响应头
+    const skipHeaders = ['content-encoding', 'transfer-encoding', 'connection', 'keep-alive'];
     response.headers.forEach((value, key) => {
-      if (!['content-encoding', 'transfer-encoding', 'connection'].includes(key.toLowerCase())) {
+      if (!skipHeaders.includes(key.toLowerCase())) {
         res.setHeader(key, value);
       }
     });
@@ -65,7 +77,7 @@ export default async function handler(req, res) {
     const data = await response.arrayBuffer();
     res.send(Buffer.from(data));
   } catch (error) {
-    console.error('Proxy error:', error);
-    res.status(502).json({ error: error.message });
+    console.error('[Proxy] Error:', error);
+    res.status(502).json({ error: error.message, target: targetUrl });
   }
 }
