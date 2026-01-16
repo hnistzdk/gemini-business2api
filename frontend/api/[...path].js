@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function - API 代理
- * 将所有 /api/* 请求转发到 HuggingFace 后端
+ * 将所有 /api/*, /v1/*, /public/* 请求转发到 HuggingFace 后端
  */
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://zaiolos-gemini2api-backend.hf.space';
@@ -20,14 +20,19 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  const { path } = req.query;
-  const targetPath = Array.isArray(path) ? path.join('/') : path || '';
+  // 从原始 URL 中提取路径（去掉 /api 前缀如果有的话）
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  let targetPath = url.pathname;
+
+  // 如果路径以 /api/ 开头，去掉这个前缀
+  if (targetPath.startsWith('/api/')) {
+    targetPath = targetPath.slice(4); // 去掉 '/api'
+  }
 
   // 构建 query string（排除 path 参数）
-  const url = new URL(req.url, `http://${req.headers.host}`);
   url.searchParams.delete('path');
   const queryString = url.search;
-  const targetUrl = `${BACKEND_URL}/${targetPath}${queryString}`;
+  const targetUrl = `${BACKEND_URL}${targetPath}${queryString}`;
 
   console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
