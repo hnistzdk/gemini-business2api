@@ -19,7 +19,7 @@ COPY core ./core
 COPY util ./util
 
 # Copy prebuilt static assets
-COPY static ./static
+#COPY static ./static
 
 # Create data directory (local + HF Spaces Pro)
 RUN mkdir -p ./data

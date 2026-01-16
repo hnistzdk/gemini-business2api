@@ -365,18 +365,21 @@ elif frontend_origin:
         allow_headers=["*"],
     )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-if os.path.exists(os.path.join("static", "assets")):
-    app.mount("/assets", StaticFiles(directory=os.path.join("static", "assets")), name="assets")
-if os.path.exists(os.path.join("static", "vendor")):
-    app.mount("/vendor", StaticFiles(directory=os.path.join("static", "vendor")), name="vendor")
+# 静态文件挂载（仅当 static 目录存在时，前后端分离部署时可省略）
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    if os.path.exists(os.path.join("static", "assets")):
+        app.mount("/assets", StaticFiles(directory=os.path.join("static", "assets")), name="assets")
+    if os.path.exists(os.path.join("static", "vendor")):
+        app.mount("/vendor", StaticFiles(directory=os.path.join("static", "vendor")), name="vendor")
 
 @app.get("/")
 async def serve_frontend_index():
     index_path = os.path.join("static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    raise HTTPException(404, "Not Found")
+    # 前后端分离时，返回提示信息
+    return JSONResponse({"message": "API server is running", "docs": "/docs"})
 
 @app.get("/logo.svg")
 async def serve_logo():
