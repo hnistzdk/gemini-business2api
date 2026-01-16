@@ -1,0 +1,251 @@
+{
+  "timestamp": "2026-01-16T00:00:00Z",
+  "project_name": "gemini-business2api",
+  "description": "Gemini Business API to OpenAI Compatible Gateway with Multi-Account Load Balancing",
+  "root_path": "d:\\project\\mine\\gemini-business2api",
+  "modules": [
+    {
+      "name": "core",
+      "path": "core/",
+      "type": "backend_core",
+      "language": "python",
+      "entry_points": [
+        "core/__init__.py"
+      ],
+      "key_files": [
+        "core/account.py",
+        "core/google_api.py",
+        "core/config.py",
+        "core/storage.py",
+        "core/jwt.py",
+        "core/message.py",
+        "core/auth.py",
+        "core/session_auth.py",
+        "core/uptime.py"
+      ],
+      "responsibilities": [
+        "多账号协调与负载均衡",
+        "Google API 交互与 Session 管理",
+        "配置管理（环境变量 > YAML > 默认值）",
+        "存储抽象层（文件/PostgreSQL）",
+        "JWT token 生成与刷新",
+        "消息解析与会话指纹生成",
+        "API Key 和 Session 认证",
+        "Uptime 监控追踪"
+      ],
+      "dependencies": [
+        "httpx",
+        "fastapi",
+        "pydantic",
+        "asyncpg (optional)"
+      ],
+      "test_coverage": "none",
+      "documentation": "CLAUDE.md"
+    },
+    {
+      "name": "frontend",
+      "path": "frontend/",
+      "type": "web_ui",
+      "language": "typescript",
+      "entry_points": [
+        "frontend/src/main.ts"
+      ],
+      "key_files": [
+        "frontend/src/router/index.ts",
+        "frontend/src/stores/index.ts",
+        "frontend/src/api/index.ts",
+        "frontend/src/views/Dashboard.vue",
+        "frontend/src/views/Accounts.vue",
+        "frontend/src/views/Settings.vue",
+        "frontend/src/views/Logs.vue",
+        "frontend/src/views/Monitor.vue"
+      ],
+      "responsibilities": [
+        "管理面板 UI（Vue 3 + Vite）",
+        "账号管理界面",
+        "系统设置界面",
+        "日志查看与过滤",
+        "监控数据可视化",
+        "公开展示页面（Uptime/Logs）"
+      ],
+      "dependencies": [
+        "vue@3.5",
+        "vue-router@4.6",
+        "pinia@3.0",
+        "axios@1.13",
+        "tailwindcss@3.4"
+      ],
+      "build_output": "../static",
+      "test_coverage": "none",
+      "documentation": "frontend/README.md"
+    },
+    {
+      "name": "util",
+      "path": "util/",
+      "type": "utility",
+      "language": "python",
+      "key_files": [
+        "util/streaming_parser.py"
+      ],
+      "responsibilities": [
+        "JSON 数组流解析器（同步/异步）",
+        "处理 Google API 的流式响应"
+      ],
+      "dependencies": [],
+      "test_coverage": "none"
+    },
+    {
+      "name": "main",
+      "path": "main.py",
+      "type": "application_entry",
+      "language": "python",
+      "responsibilities": [
+        "FastAPI 应用入口",
+        "路由定义（OpenAI 兼容接口）",
+        "中间件配置（CORS, Session, Uptime）",
+        "启动逻辑与后台任务",
+        "流式对话生成器",
+        "图片生成与下载"
+      ],
+      "key_endpoints": [
+        "POST /v1/chat/completions - OpenAI 兼容对话接口",
+        "GET /v1/models - 模型列表",
+        "POST /login - 管理员登录",
+        "GET /admin/stats - 统计数据",
+        "GET /admin/accounts - 账号列表",
+        "PUT /admin/settings - 系统设置",
+        "GET /public/uptime - 公开监控数据",
+        "GET /public/log - 公开日志"
+      ],
+      "dependencies": [
+        "core.*",
+        "util.streaming_parser"
+      ]
+    }
+  ],
+  "data_storage": {
+    "local_files": [
+      "data/accounts.json - 账号配置",
+      "data/settings.yaml - 系统设置",
+      "data/stats.json - 统计数据",
+      "data/uptime.json - 监控数据",
+      "data/images/ - 生成图片存储"
+    ],
+    "database_tables": [
+      "kv_store (key, value, updated_at) - PostgreSQL 键值存储"
+    ],
+    "storage_strategy": "文件优先，数据库可选（通过 DATABASE_URL 启用）"
+  },
+  "configuration": {
+    "priority": "环境变量 > YAML > 默认值",
+    "security_config": [
+      "ADMIN_KEY - 管理员密钥（必需，仅环境变量）",
+      "SESSION_SECRET_KEY - Session 密钥（自动生成）"
+    ],
+    "business_config": [
+      "API_KEY - API 访问密钥（可选）",
+      "PROXY - 代理地址",
+      "BASE_URL - 服务器 URL",
+      "IMAGE_GENERATION_ENABLED - 图片生成开关",
+      "MAX_REQUEST_RETRIES - 请求重试次数",
+      "RATE_LIMIT_COOLDOWN_SECONDS - 429 冷却时间"
+    ],
+    "hot_reload": true
+  },
+  "deployment": {
+    "local": {
+      "script": "deploy.sh / deploy.bat",
+      "steps": [
+        "构建前端（npm run build）",
+        "创建虚拟环境（python -m venv .venv）",
+        "安装依赖（pip install -r requirements.txt）",
+        "配置环境变量（.env）",
+        "启动服务（python main.py）"
+      ]
+    },
+    "docker": {
+      "dockerfile": "Dockerfile",
+      "compose": "docker-compose.yml",
+      "volumes": [
+        "./data:/app/data"
+      ]
+    },
+    "huggingface_spaces": {
+      "environment": "HF Spaces",
+      "storage": "PostgreSQL (DATABASE_URL)",
+      "persistent_path": "/data"
+    },
+    "vercel_frontend": {
+      "build_command": "npm run build",
+      "output_directory": "dist",
+      "environment_variables": [
+        "VITE_API_BASE_URL"
+      ]
+    }
+  },
+  "coverage": {
+    "total_files_estimated": 150,
+    "scanned_files": 45,
+    "coverage_percentage": 30,
+    "scanned_modules": [
+      "core/ (100%)",
+      "frontend/src/ (60%)",
+      "util/ (100%)",
+      "main.py (100%)"
+    ],
+    "gaps": [
+      "frontend/node_modules/ - 跳过（第三方依赖）",
+      "frontend/src/components/ - 部分扫描（UI 组件）",
+      "data/ - 跳过（运行时数据）",
+      "static/ - 跳过（构建产物）"
+    ]
+  },
+  "ignored_patterns": [
+    "node_modules/**",
+    ".git/**",
+    ".github/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "__pycache__/**",
+    "*.lock",
+    "*.log",
+    "*.bin",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.zip",
+    "*.tar",
+    "*.gz",
+    ".venv/**",
+    "venv/**",
+    "env/**",
+    "data/**",
+    "static/**"
+  ],
+  "key_insights": [
+    "前后端分离架构，支持独立部署（Vercel + HuggingFace）",
+    "多账号协调采用轮询 + 故障自动切换策略",
+    "会话持久化基于对话指纹（前3条消息 + IP），支持上下文连续对话",
+    "429 限流错误不增加 error_count，冷却期后自动恢复",
+    "配置分为安全配置（仅环境变量）和业务配置（支持热更新）",
+    "存储抽象层支持本地文件和 PostgreSQL 无缝切换",
+    "图片生成支持 Base64 和 URL 两种输出格式",
+    "Uptime 监控追踪 API 服务、账号池、模型三个维度",
+    "日志系统采用内存缓冲区（最近 1000 条），支持按请求 ID 分组",
+    "JWT token 自动刷新，有效期 270 秒"
+  ],
+  "next_steps": [
+    "建议添加单元测试（pytest + pytest-asyncio）",
+    "建议添加 API 集成测试（httpx.AsyncClient）",
+    "建议补充前端组件文档（Storybook）",
+    "建议添加性能测试（locust）",
+    "建议补充数据库迁移脚本（alembic）",
+    "建议添加 CI/CD 配置（GitHub Actions）"
+  ],
+  "truncated": false,
+  "scan_completed_at": "2026-01-16T00:00:00Z"
+}
