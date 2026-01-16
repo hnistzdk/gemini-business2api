@@ -2,6 +2,9 @@
 
 const TOKEN_KEY = 'auth_token'
 
+// API 路径前缀：Vercel 部署时通过 /api 代理到后端
+export const API_PREFIX = import.meta.env.VITE_API_URL ? '' : '/api'
+
 // 获取存储的 Token
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)

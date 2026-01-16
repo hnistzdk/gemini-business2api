@@ -4,10 +4,7 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/v1/:path*", "destination": "/api/v1/:path*" },
-    { "source": "/login", "destination": "/api/login" },
-    { "source": "/logout", "destination": "/api/logout" },
-    { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
     { "source": "/public/:path*", "destination": "/api/public/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
