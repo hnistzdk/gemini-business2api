@@ -112,6 +112,43 @@ docker run -d -p 7860:7860 \
   gemini-business2api
 ```
 
+### 方式四：前后端分离部署（Vercel + HuggingFace Spaces）
+
+适用于需要将前端和后端分开部署的场景。
+
+**后端部署到 HuggingFace Spaces：**
+
+1. 创建 Docker 类型的 Space
+2. **重要**：在 README.md 的 YAML 配置中添加 `app_port: 7860`：
+   ```yaml
+   ---
+   title: Your App Name
+   emoji: 🚀
+   colorFrom: blue
+   colorTo: green
+   sdk: docker
+   app_port: 7860
+   pinned: false
+   ---
+   ```
+3. 将 Space 设置为 **Public**（私有 Space 外部无法访问）
+4. 设置环境变量：`ADMIN_KEY`、`DATABASE_URL`（可选）
+
+**前端部署到 Vercel：**
+
+1. Fork 本项目或导入 `frontend/` 目录
+2. Vercel 会自动识别 `api/[...path].js` 作为 Serverless Function
+3. 修改 `api/[...path].js` 中的 `BACKEND_URL` 为你的 HF Space 地址
+4. 或在 Vercel 项目设置中添加环境变量 `BACKEND_URL`
+
+**常见问题：**
+
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| 所有请求返回 404 | HF Space README 缺少 `app_port` | 添加 `app_port: 7860` |
+| 所有请求返回 404 | HF Space 是私有的 | 设置为 Public |
+| POST 请求返回 405 | Vercel rewrites 不支持 POST | 使用 Serverless Function 代理 |
+
 ### 更新
 
 **Linux/macOS:**

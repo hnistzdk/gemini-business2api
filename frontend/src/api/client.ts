@@ -2,7 +2,18 @@
 
 const TOKEN_KEY = 'auth_token'
 
-// API 路径前缀：Vercel 部署时通过 /api 代理到后端
+/**
+ * API path prefix for cross-origin deployment
+ *
+ * When VITE_API_URL is set (e.g., Cloudflare Worker proxy):
+ *   - API_PREFIX = '' (empty)
+ *   - Requests go to: VITE_API_URL/login, VITE_API_URL/admin/*, etc.
+ *
+ * When VITE_API_URL is not set (Vercel deployment):
+ *   - API_PREFIX = '/api'
+ *   - Requests go to: /api/login, /api/admin/*, etc.
+ *   - Vercel Serverless Function proxies to HF Space backend
+ */
 export const API_PREFIX = import.meta.env.VITE_API_URL ? '' : '/api'
 
 // 获取存储的 Token

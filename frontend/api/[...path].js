@@ -1,13 +1,33 @@
 /**
- * Vercel Serverless Function - API 代理
- * 将所有 /api/*, /v1/*, /public/* 请求转发到 HuggingFace 后端
+ * Vercel Serverless Function - API Proxy
+ *
+ * Proxies all /api/*, /v1/*, /public/* requests to HuggingFace Space backend.
+ *
+ * Why use Serverless Function instead of Vercel rewrites?
+ * - Vercel rewrites only work for GET requests
+ * - POST/PUT/DELETE requests return 405 Method Not Allowed with rewrites
+ * - Serverless Functions support all HTTP methods
+ *
+ * Configuration:
+ * - Set BACKEND_URL environment variable in Vercel project settings
+ * - Or modify the default URL below
+ *
+ * HuggingFace Space Requirements:
+ * - Space must be PUBLIC (private spaces return 404)
+ * - README.md must include `app_port: 7860` in YAML config
+ *
+ * Route mapping:
+ * - /api/login    → BACKEND_URL/login
+ * - /api/admin/*  → BACKEND_URL/admin/*
+ * - /v1/*         → BACKEND_URL/v1/*
+ * - /public/*     → BACKEND_URL/public/*
  */
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://zaiolos-gemini2api-backend.hf.space';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Preserve raw body for form-data support
   },
 };
 
@@ -20,16 +40,16 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  // 从原始 URL 中提取路径（去掉 /api 前缀如果有的话）
+  // Extract path from original URL, remove /api prefix if present
   const url = new URL(req.url, `http://${req.headers.host}`);
   let targetPath = url.pathname;
 
-  // 如果路径以 /api/ 开头，去掉这个前缀
+  // Remove /api prefix (frontend requests /api/*, proxy to backend /*)
   if (targetPath.startsWith('/api/')) {
-    targetPath = targetPath.slice(4); // 去掉 '/api'
+    targetPath = targetPath.slice(4);
   }
 
-  // 构建 query string（排除 path 参数）
+  // Build query string (exclude internal 'path' parameter)
   url.searchParams.delete('path');
   const queryString = url.search;
   const targetUrl = `${BACKEND_URL}${targetPath}${queryString}`;
@@ -37,19 +57,19 @@ export default async function handler(req, res) {
   console.log(`[Proxy] ${req.method} ${targetUrl}`);
 
   try {
-    // 只保留必要的请求头
+    // Forward only necessary headers
     const headers = {
       'Content-Type': req.headers['content-type'] || 'application/json',
       'Accept': req.headers['accept'] || '*/*',
       'User-Agent': req.headers['user-agent'] || 'Vercel-Proxy',
     };
 
-    // 保留 Authorization 头
+    // Preserve Authorization header for API authentication
     if (req.headers['authorization']) {
       headers['Authorization'] = req.headers['authorization'];
     }
 
-    // 获取原始 body
+    // Get raw body for POST/PUT/DELETE requests
     let body = undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       body = await getRawBody(req);
@@ -58,7 +78,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 转发请求
+    // Forward request to backend
     const response = await fetch(targetUrl, {
       method: req.method,
       headers,
@@ -67,10 +87,10 @@ export default async function handler(req, res) {
 
     console.log(`[Proxy] Response: ${response.status}`);
 
-    // 设置响应状态
+    // Set response status
     res.status(response.status);
 
-    // 复制响应头
+    // Copy response headers (skip problematic ones)
     const skipHeaders = ['content-encoding', 'transfer-encoding', 'connection', 'keep-alive'];
     response.headers.forEach((value, key) => {
       if (!skipHeaders.includes(key.toLowerCase())) {
@@ -78,7 +98,7 @@ export default async function handler(req, res) {
       }
     });
 
-    // 返回响应
+    // Return response body
     const data = await response.arrayBuffer();
     res.send(Buffer.from(data));
   } catch (error) {
